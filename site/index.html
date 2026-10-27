@@ -37,11 +37,11 @@ button:hover{border-color:var(--ink)}
 /* 오른쪽 판 */
 #panel{position:fixed;right:16px;top:calc(16px + var(--navh,0px));bottom:96px;width:372px;background:var(--glass);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);
   border:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;transition:background .6s}
-#modes{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
-#modes button{border:0;border-right:1px solid var(--line);padding:11px 4px 10px;text-align:left;padding-left:10px}
+#modes{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line)}
+#modes button{border:0;border-right:1px solid var(--line);padding:11px 4px 10px;text-align:left;padding-left:8px}
 #modes button:last-child{border-right:0}
 #modes button .n{display:block;font:500 10px/1 var(--mono);color:var(--ink3);letter-spacing:.08em}
-#modes button .t{display:block;margin-top:6px;font-size:13px;font-weight:500}
+#modes button .t{display:block;margin-top:6px;font-size:12.5px;font-weight:500;line-height:1.3}
 #modes button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 #modes button[aria-pressed="true"] .n{color:var(--paper);opacity:.7}
 #body{flex:1;overflow:auto;padding:16px 18px 18px;scrollbar-width:thin}
@@ -80,6 +80,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .verdict b{display:block;font:500 15px var(--mono);margin-top:3px}
 .ok b{color:#2E7D4F}.no b{color:var(--warn)}
 :root[data-night="1"] .ok b{color:#7BD39A}
+#trChart{width:100%;height:96px;display:block;cursor:pointer;margin-top:4px}
 #tl{width:100%;height:56px;display:block;cursor:pointer;margin-top:4px}
 .vlist{margin:0;padding:0;list-style:none;font-size:13px}
 .vlist li{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:6px 0}
@@ -176,7 +177,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     <button data-m="sun" aria-pressed="true"><span class="n">01</span><span class="t">해와 그림자</span></button>
     <button data-m="water"><span class="n">02</span><span class="t">물이 차오르면</span></button>
     <button data-m="view"><span class="n">03</span><span class="t">여기서 보이는 것</span></button>
-    <button data-m="tour"><span class="n">04</span><span class="t">둘러보기</span></button>
+    <button data-m="traffic"><span class="n">04</span><span class="t">출퇴근 정체</span></button>
+    <button data-m="tour"><span class="n">05</span><span class="t">둘러보기</span></button>
   </nav>
   <div id="body">
     <!-- 01 해 -->
@@ -213,7 +215,28 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <div class="chips" id="eyePre"><button data-v="1.6" aria-pressed="true">사람 1.6 m</button><button data-v="30">10층 30 m</button><button data-v="100">드론 100 m</button></div>
       <div id="viewOut" style="margin-top:14px"><div class="empty"><span class="big">◎</span>지도 위 한 점을 눌러 보세요.</div></div>
     </section>
-    <!-- 04 투어 -->
+    <!-- 04 교통 -->
+    <section class="sec" id="s-traffic">
+      <p class="lead">국가교통정보센터(ITS)가 30분마다 알려 준 <b>구간별 실제 속도</b>를 일주일 모아 시간대별로 정리했습니다. 아래 막대로 시각을 옮기면 도로 색과 차 불빛의 흐름이 바뀝니다. <b>도로를 누르면</b> 그 구간의 하루를 봅니다.</p>
+      <div class="chips" id="wkPre"><button data-v="0" aria-pressed="true">평일</button><button data-v="1">주말</button></div>
+      <div class="chips" id="hrPre" style="margin-top:6px"><button data-v="480">출근 08시</button><button data-v="780">낮 13시</button><button data-v="1080">퇴근 18시</button><button data-v="180">심야 03시</button></div>
+      <div class="lbl" id="trLbl">지금 시각</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v" id="tV">0<small>km/h</small></div><div class="d">관측 구간 평균 속도</div></div>
+        <div class="kpi"><div class="v" id="tR">0<small>%</small></div><div class="d">평소(가장 빠른 때) 대비</div></div>
+        <div class="kpi"><div class="v" id="tJ">0<small>km</small></div><div class="d">정체 구간(40% 미만)</div></div>
+        <div class="kpi"><div class="v" id="tS">0<small>km</small></div><div class="d">서행 구간(40~60%)</div></div>
+      </div>
+      <div class="legend"><i style="background:#C8302B"></i><i style="background:#E8792E"></i><i style="background:#E8B930"></i><i style="background:#2E9E5B"></i></div>
+      <div class="legend-l"><span>정체 ~40%</span><span>서행 ~60%</span><span>보통 ~80%</span><span>원활</span></div>
+      <div class="lbl">시간대별 평균 속도 · <span style="color:var(--accent)">━ 평일</span> <span>┅ 주말</span></div>
+      <svg id="trChart" viewBox="0 0 300 96" preserveAspectRatio="none"></svg>
+      <div class="lbl">지금 가장 막히는 길(평소 대비)</div>
+      <ul class="vlist tour" id="trTop"></ul>
+      <div id="trLink"></div>
+      <p class="hint" id="trHint"></p>
+    </section>
+    <!-- 05 투어 -->
     <section class="sec" id="s-tour">
       <p class="lead">카메라가 스스로 도시를 한 바퀴 돕니다. 장면마다 시각과 모드가 바뀝니다. 언제든 끌어서 멈출 수 있어요.</p>
       <div class="row"><button id="tourGo" style="padding:8px 14px">▶ 처음부터</button><span class="mono" id="tourN" style="color:var(--ink3);font-size:12px"></span></div>
@@ -250,6 +273,9 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { computeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -537,6 +563,156 @@ const rain = (() => {
 })();
 scene.add(rain);
 
+// ───────── 교통(ITS 구간 속도 → 도로 색 + 차 불빛)
+const TR = (() => {
+  const N = A.traf_n, P = A.traf, SP = A.traf_sp, TM = A.traf_m, L = N.length, T = M.traffic;
+  const RW = { 1: 9, 2: 7, 3: 7, 4: 5.5, 5: 4.5, 6: 4.5, 7: 3.5 };
+  const L0 = [], LN = [], LEN = new Float32Array(L), FF = new Float32Array(L), V0 = [], VN = [];
+  const dx = [], dy = [], dz = [], dd = [];
+  const pos = [], segL = [];
+  let o = 0;
+  for (let k = 0; k < L; k++) {
+    const n = N[k], rank = TM[k * 3], w = RW[rank] || 4.5, off = w * 0.5 + 0.8;
+    const st = dx.length; let cum = 0;
+    for (let i = 0; i < n - 1; i++) {
+      const x1 = P[o + i*2] / 10, y1 = P[o + i*2+1] / 10, x2 = P[o + i*2+2] / 10, y2 = P[o + i*2+3] / 10;
+      const sl = Math.hypot(x2 - x1, y2 - y1) || 0.01, rx = (y2 - y1) / sl, ry = -(x2 - x1) / sl;   // 진행 방향 오른쪽(우측통행)
+      const m = Math.max(1, Math.ceil(sl / 30));
+      for (let j = i ? 1 : 0; j <= m; j++) {
+        const t = j / m, x = x1 + (x2 - x1) * t + rx * off, y = y1 + (y2 - y1) * t + ry * off;
+        if (dx.length > st) cum += Math.hypot(x - dx[dx.length - 1], y - dy[dy.length - 1]);
+        dx.push(x); dy.push(y); dz.push(hAt(x, y) + 3); dd.push(cum);
+      }
+    }
+    o += n * 2;
+    L0.push(st); LN.push(dx.length - st); LEN[k] = cum;
+    let ff = 0; for (let h = 0; h < 48; h++) ff = Math.max(ff, SP[k * 48 + h]); FF[k] = ff || 1;
+    const v0 = segL.length;
+    for (let i = st; i < dx.length - 1; i++) {        // 선분 하나 = 화면에서 일정 굵기로 그리는 조각
+      pos.push(dx[i], dz[i], -dy[i], dx[i+1], dz[i+1], -dy[i+1]);
+      segL.push(k);
+    }
+    V0.push(v0); VN.push(segL.length - v0);
+  }
+  const geo = new LineSegmentsGeometry(); geo.setPositions(new Float32Array(pos));
+  const colors = new Float32Array(pos.length); geo.setColors(colors);
+  const lineMat = new LineMaterial({ vertexColors: true, linewidth: 3, worldUnits: false, toneMapped: false, transparent: true });
+  lineMat.resolution.set(innerWidth, innerHeight);
+  const mesh = new LineSegments2(geo, lineMat); mesh.name = "traffic"; mesh.renderOrder = 2;
+  const SEG = Int32Array.from(segL);
+  // 차: 구간 길이에 비례해 배치(간선은 촘촘하게)
+  const cars = [];
+  for (let k = 0; k < L; k++) { const gap = TM[k * 3] <= 3 ? 55 : 95, c = Math.max(1, Math.round(LEN[k] / gap)); for (let i = 0; i < c; i++) cars.push(k, (i + Math.random() * .6) / c * LEN[k]); }
+  const NC = cars.length / 2, cL = new Int32Array(NC), cS = new Float32Array(NC), cG = new Int32Array(NC);
+  for (let i = 0; i < NC; i++) { cL[i] = cars[i*2]; cS[i] = cars[i*2+1]; }
+  const cp = new Float32Array(NC * 3), cg = new THREE.BufferGeometry();
+  cg.setAttribute("position", new THREE.BufferAttribute(cp, 3));
+  const carMat = new THREE.PointsMaterial({ size: 3.2, sizeAttenuation: false, color: 0x1d2027, transparent: true, depthWrite: false });
+  const carPts = new THREE.Points(cg, carMat); carPts.frustumCulled = false; carPts.renderOrder = 3;
+  const group = new THREE.Group(); group.add(mesh, carPts); group.visible = false;
+  // 시간대별 망 평균(길이 가중)
+  const avg = [[], []];
+  for (let wk = 0; wk < 2; wk++) for (let h = 0; h < 24; h++) { let a = 0, b = 0; for (let k = 0; k < L; k++) { a += LEN[k] * SP[k * 48 + wk * 24 + h]; b += LEN[k]; } avg[wk].push(a / b); }
+  const total = LEN.reduce((a, b) => a + b, 0);
+  return { L, SP, TM, T, LEN, FF, L0, LN, V0, VN, dx, dy, dz, dd, mesh, geo, colors, lineMat, SEG, carPts, carMat, cL, cS, cG, cp, NC, group, avg, total };
+})();
+scene.add(TR.group);
+const trSp = (k, min, wk) => {                     // 그 시각(분) 속도 km/h — 시간 사이는 선형
+  const hf = min / 60, h0 = Math.floor(hf) % 24, h1 = (h0 + 1) % 24, f = hf - Math.floor(hf), b = k * 48 + wk * 24;
+  return TR.SP[b + h0] * (1 - f) + TR.SP[b + h1] * f;
+};
+const TC = [[0.784, 0.188, 0.169], [0.910, 0.475, 0.180], [0.910, 0.725, 0.188], [0.180, 0.620, 0.357]];
+const trCol = r => TC[r < 0.4 ? 0 : r < 0.6 ? 1 : r < 0.8 ? 2 : 3];   // 평소 대비 비율 → 정체·서행·보통·원활
+const TRS = { wk: 0, last: -1, sel: -1 };
+function trUpdate(force) {
+  if (!TR.group.visible) return;
+  const key = Math.round(S.min) + TRS.wk * 2000;
+  if (!force && key === TRS.last) return; TRS.last = key;
+  const col = TR.colors;
+  let a = 0, j = 0, sl = 0, rr = 0;
+  const roads = {};
+  for (let k = 0; k < TR.L; k++) {
+    const v = trSp(k, S.min, TRS.wk), r = v / TR.FF[k], c = k === TRS.sel ? [0.08, 0.14, 0.52] : trCol(r), len = TR.LEN[k];
+    for (let i = TR.V0[k] * 6, e = (TR.V0[k] + TR.VN[k]) * 6; i < e; i += 3) { col[i] = c[0]; col[i+1] = c[1]; col[i+2] = c[2]; }
+    a += v * len; rr += r * len;
+    if (r < 0.4) j += len; else if (r < 0.6) sl += len;
+    const nm = TR.T.names[TR.TM[k * 3 + 2]];
+    if (nm) { const g = roads[nm] || (roads[nm] = { len: 0, r: 0, v: 0, worst: k, wr: 9 }); g.len += len; g.r += r * len; g.v += v * len; if (r < g.wr) { g.wr = r; g.worst = k; } }
+  }
+  TR.geo.setColors(col);
+  TR.lineMat.linewidth = MOBILE ? 2.2 : 3;
+  $("#tV").innerHTML = `${(a / TR.total).toFixed(1)}<small>km/h</small>`;
+  $("#tR").innerHTML = `${Math.round(rr / TR.total * 100)}<small>%</small>`;
+  $("#tJ").innerHTML = `${(j / 1000).toFixed(1)}<small>km</small>`;
+  $("#tS").innerHTML = `${(sl / 1000).toFixed(1)}<small>km</small>`;
+  $("#trLbl").textContent = `${TRS.wk ? "주말" : "평일"} ${$("#rT").textContent} · 관측 구간 ${(TR.total / 1000).toFixed(0)}km(방향별)`;
+  const top = Object.entries(roads).filter(([, g]) => g.len > 600).map(([n, g]) => ({ n, r: g.r / g.len, v: g.v / g.len, k: g.worst })).sort((x, y) => x.r - y.r).slice(0, 6);
+  $("#trTop").innerHTML = top.map(t => `<li data-k="${t.k}">${t.n}<span>${t.v.toFixed(0)} km/h · ${Math.round(t.r * 100)}%</span></li>`).join("");
+  document.querySelectorAll("#hrPre button").forEach(b => b.setAttribute("aria-pressed", Math.abs(+b.dataset.v - S.min) < 3));
+  trChart();
+  if (TRS.sel >= 0) trInfo(TRS.sel, true);
+}
+function trChart() {
+  const svg = $("#trChart"); if (!svg) return;
+  const all = TR.avg[0].concat(TR.avg[1]), lo = Math.floor(Math.min(...all) / 5) * 5, hi = Math.ceil(Math.max(...all) / 5) * 5;
+  const X = h => h / 24 * 300, Y = v => 80 - (v - lo) / (hi - lo || 1) * 66;
+  const line = (arr, extra) => `<polyline fill="none" points="${arr.concat(arr[0]).map((v, h) => `${X(h).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}" ${extra}/>`;
+  let s = `<rect x="${X(7)}" y="6" width="${X(2)}" height="74" fill="var(--accentS)"/><rect x="${X(17)}" y="6" width="${X(2)}" height="74" fill="var(--accentS)"/>`;
+  s += line(TR.avg[1], `stroke="var(--ink3)" stroke-width="1.3" stroke-dasharray="3 3"`) + line(TR.avg[0], `stroke="var(--accent)" stroke-width="2"`);
+  for (let h = 0; h <= 24; h += 6) s += `<text x="${Math.min(292, Math.max(6, X(h)))}" y="93" font-size="9" text-anchor="middle" fill="var(--ink3)" font-family="IBM Plex Mono">${h}시</text>`;
+  s += `<text x="2" y="${Y(hi) + 3}" font-size="9" fill="var(--ink3)" font-family="IBM Plex Mono">${hi}</text><text x="2" y="${Y(lo) - 2}" font-size="9" fill="var(--ink3)" font-family="IBM Plex Mono">${lo}km/h</text>`;
+  const cx = X(S.min / 60); s += `<line x1="${cx}" x2="${cx}" y1="4" y2="82" stroke="var(--ink)" stroke-width="1.5"/>`;
+  s += `<text x="${X(8)}" y="15" font-size="9" text-anchor="middle" fill="var(--accent)">출근</text><text x="${X(18)}" y="15" font-size="9" text-anchor="middle" fill="var(--accent)">퇴근</text>`;
+  svg.innerHTML = s;
+}
+$("#trChart").onclick = e => { const r = e.currentTarget.getBoundingClientRect(); S.min = Math.round((e.clientX - r.left) / r.width * 1440 / 5) * 5 % 1440; applySun(); };
+function trInfo(k, quiet) {
+  TRS.sel = k;
+  const nm = TR.T.names[TR.TM[k * 3 + 2]] || "이름 없는 도로", lim = TR.TM[k * 3 + 1], v = trSp(k, S.min, TRS.wk);
+  const RK = { 1: "고속도로", 2: "도시고속도로", 3: "일반국도", 4: "특별·광역시도", 5: "국가지원지방도", 6: "지방도", 7: "시군도" };
+  const pts = [0, 1].map(wk => Array.from({ length: 25 }, (_, h) => TR.SP[k * 48 + wk * 24 + h % 24]));
+  const hi = Math.max(...pts[0], ...pts[1], lim || 0, 10);
+  const X = h => h / 24 * 300, Y = s => 62 - s / hi * 56;
+  const pl = (a, ex) => `<polyline fill="none" points="${a.map((s, h) => `${X(h)},${Y(s).toFixed(1)}`).join(" ")}" ${ex}/>`;
+  const cx = X(S.min / 60);
+  $("#trLink").innerHTML = `<div class="lbl">고른 구간</div><div class="bi"><h3>${nm}</h3><div class="sub">${RK[TR.TM[k * 3]] || ""} · 길이 ${Math.round(TR.LEN[k])}m${lim ? ` · 제한 ${lim}km/h` : ""}</div></div>
+    <table class="tbl"><tr><td>지금(${TRS.wk ? "주말" : "평일"} ${$("#rT").textContent})</td><td>${v.toFixed(0)} km/h</td></tr>
+    <tr><td>하루 중 가장 빠를 때</td><td>${TR.FF[k].toFixed(0)} km/h</td></tr><tr><td>평소 대비</td><td>${Math.round(v / TR.FF[k] * 100)}%</td></tr></table>
+    <svg viewBox="0 0 300 74" preserveAspectRatio="none" style="width:100%;height:74px;margin-top:8px">
+      ${lim ? `<line x1="0" x2="300" y1="${Y(lim)}" y2="${Y(lim)}" stroke="var(--ink3)" stroke-dasharray="2 3"/><text x="298" y="${Y(lim) - 3}" font-size="9" text-anchor="end" fill="var(--ink3)">제한 ${lim}</text>` : ""}
+      ${pl(pts[1], `stroke="var(--ink3)" stroke-width="1.2" stroke-dasharray="3 3"`)}${pl(pts[0], `stroke="var(--accent)" stroke-width="2"`)}
+      <line x1="${cx}" x2="${cx}" y1="2" y2="64" stroke="var(--ink)"/>
+      ${[0, 6, 12, 18, 24].map(h => `<text x="${Math.min(292, Math.max(6, X(h)))}" y="73" font-size="9" text-anchor="middle" fill="var(--ink3)" font-family="IBM Plex Mono">${h}</text>`).join("")}</svg>`;
+  if (!quiet) trUpdate(true);
+}
+$("#trTop").onclick = e => {
+  const li = e.target.closest("li"); if (!li) return; const k = +li.dataset.k, i = TR.L0[k] + (TR.LN[k] >> 1);
+  trInfo(k); flyTo(V(TR.dx[i], TR.dy[i], TR.dz[i]), 1500, 15, 55, 2200);
+};
+function trCars(dt) {                              // 차 불빛: 실제 속도 × 8배로 흐르게(연출)
+  if (!TR.group.visible) return;
+  const { cL, cS, cG, cp, dx, dy, dz, dd, L0, LN, LEN } = TR;
+  for (let i = 0; i < TR.NC; i++) {
+    const k = cL[i], v = trSp(k, S.min, TRS.wk) / 3.6 * 8;
+    let s = cS[i] + v * dt, g = cG[i];
+    if (s >= LEN[k]) { s -= LEN[k]; g = 0; }
+    const b = L0[k], n = LN[k];
+    while (g < n - 2 && dd[b + g + 1] < s) g++;
+    const s0 = dd[b + g], s1 = n > 1 ? dd[b + g + 1] : s0, t = s1 > s0 ? (s - s0) / (s1 - s0) : 0, g1 = n > 1 ? g + 1 : g;
+    cp[i*3] = dx[b+g] + (dx[b+g1] - dx[b+g]) * t; cp[i*3+1] = dz[b+g] + (dz[b+g1] - dz[b+g]) * t + 1.2; cp[i*3+2] = -(dy[b+g] + (dy[b+g1] - dy[b+g]) * t);
+    cS[i] = s; cG[i] = g;
+  }
+  TR.carPts.geometry.attributes.position.needsUpdate = true;
+  const night = S.night > 0.5;
+  TR.carMat.color.set(night ? 0xfff0c8 : 0x1d2027); TR.carMat.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+  TR.carMat.size = night ? 3.6 : 3.2;
+}
+$("#wkPre").onclick = e => { const b = e.target.closest("button"); if (!b) return; TRS.wk = +b.dataset.v; document.querySelectorAll("#wkPre button").forEach(x => x.setAttribute("aria-pressed", x === b)); drawScrub(); trUpdate(true); saveHash(); };
+$("#hrPre").onclick = e => { const b = e.target.closest("button"); if (!b) return; const from = S.min, to = +b.dataset.v, t0 = performance.now();
+  const f = () => { const k = Math.min(1, (performance.now() - t0) / 1200), e2 = 1 - (1 - k) ** 3; S.min = Math.round(from + (to - from) * e2); applySun(); if (k < 1) requestAnimationFrame(f); }; f(); };
+{ const T = M.traffic, wd = T.hours[0];
+  $("#trHint").textContent = `자료: 국가교통정보센터(ITS) 소통정보 구간 평균속도, ${T.from}~${T.to} 30분 간격 ${T.snaps}회(평일 시간당 ${Math.min(...wd)}~${Math.max(...wd)}회). 구간·시간대별 중앙값이고, 표본이 없는 시간은 앞뒤 시간으로 이었습니다. 색은 그 구간이 하루 중 가장 빠를 때와 비교한 비율입니다. ITS 가 잡는 간선 위주라 단지 안 길·이면도로는 없습니다. 차 불빛은 속도를 8배 빠르게 보여 주는 연출이며 실제 교통량이 아닙니다.`; }
+
 // 표시점(일조 측정점·조망점)
 const marker = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x152484 }));
 marker.visible = false; scene.add(marker);
@@ -588,8 +764,9 @@ function applySun() {
   sky.material.uniforms.sunPosition.value.copy(S.dir).multiplyScalar(1000);
   sky.material.uniforms.rayleigh.value = 1.0 + 1.8 * low;
   renderer.toneMappingExposure = 0.62 + 0.35 * S.night;
-  U.uNight.value = S.night;
-  bloom.strength = 0.7 * S.night;
+  const trf = S.mode === "traffic";               // 교통 모드: 도로 색이 묻히지 않게 창 불빛·빛번짐을 줄인다
+  U.uNight.value = S.night * (trf ? 0.35 : 1);
+  bloom.strength = (trf ? 0.22 : 0.7) * S.night;
   lamps.material.opacity = S.night;
   const fogC = new THREE.Color().setHSL(0.58, 0.2 * day, 0.08 + 0.78 * day);
   if (low > 0.4 && day > 0.5) fogC.lerp(new THREE.Color(0xf0d0b0), (low - 0.4) * 0.5);
@@ -604,6 +781,7 @@ function applySun() {
     : `해 진 뒤 · 고도 ${altD.toFixed(0)}°`;
   $("#tm").value = S.min;
   drawScrub();
+  trUpdate();
   saveHash();
 }
 
@@ -629,6 +807,12 @@ function drawScrub() {
   g.strokeStyle = ink; g.globalAlpha = .5; g.lineWidth = dpr; g.beginPath(); g.moveTo(0, mid); g.lineTo(W, mid); g.stroke(); g.globalAlpha = 1;
   g.fillStyle = ink; g.font = `${10 * dpr}px IBM Plex Mono`; g.textAlign = "center";
   for (let h = 0; h <= 24; h += 3) { const x = h / 24 * W; g.fillRect(x, mid, dpr, 4 * dpr); if (h % 6 === 0 && h && h < 24) g.fillText(h + "시", x, H - 2 * dpr); }
+  if (S.mode === "traffic") {                     // 교통 모드: 망 평균 속도 곡선을 겹친다
+    const av = TR.avg[TRS.wk], lo = Math.min(...av), hi = Math.max(...av);
+    g.strokeStyle = acc; g.lineWidth = 2 * dpr; g.beginPath();
+    for (let h = 0; h <= 24; h++) { const xx = h / 24 * W, yy = H * 0.12 + (1 - (av[h % 24] - lo) / (hi - lo || 1)) * H * 0.5; h ? g.lineTo(xx, yy) : g.moveTo(xx, yy); }
+    g.stroke(); g.fillStyle = acc; g.textAlign = "left"; g.fillText("평균 속도", 4 * dpr, H * 0.1); g.textAlign = "center";
+  }
   const x = S.min / 1440 * W;
   g.fillStyle = acc; g.fillRect(x - dpr, 0, 2 * dpr, H);
   const a = S.alt / RAD; g.beginPath(); g.arc(x, mid - a / 80 * mid, 5 * dpr, 0, 7); g.fillStyle = a > 0 ? "#E2A33A" : ink; g.fill();
@@ -648,7 +832,7 @@ function fitShadow() {
 }
 
 // ───────── 고르기
-const ray = new THREE.Raycaster(); ray.firstHitOnly = true;
+const ray = new THREE.Raycaster(); ray.firstHitOnly = true; ray.params.Line2 = { threshold: 6 };
 const ndc = new THREE.Vector2();
 function pick(ev, objs) {
   const r = canvas.getBoundingClientRect();
@@ -667,8 +851,12 @@ canvas.addEventListener("pointermove", ev => { if (ev.buttons) { tip.style.displ
 canvas.addEventListener("pointerleave", () => { tip.style.display = "none"; U.uHov.value = -1; });
 function doHover() {
   if (!hovPending) return; const ev = hovPending; hovPending = null;
-  const h = pick(ev, [bMesh, terrain]);
-  if (h && h.object === bMesh) {
+  const h = pick(ev, TR.group.visible ? [TR.mesh, bMesh, terrain] : [bMesh, terrain]);
+  if (h && h.object === TR.mesh) {
+    const k = TR.SEG[h.faceIndex], v = trSp(k, S.min, TRS.wk);
+    tip.innerHTML = `${TR.T.names[TR.TM[k * 3 + 2]] || "도로"}<small>${v.toFixed(0)}km/h · 평소의 ${Math.round(v / TR.FF[k] * 100)}%</small>`;
+    tip.style.display = "block"; tip.style.left = ev.clientX + "px"; tip.style.top = ev.clientY + "px"; canvas.style.cursor = "pointer"; U.uHov.value = -1;
+  } else if (h && h.object === bMesh) {
     const b = idOf(h); U.uHov.value = b;
     tip.innerHTML = `${bName(b)}<small>${A.bfl[b] ? A.bfl[b] + "층" : ""} ${B.h[b].toFixed(0)}m</small>`;
     tip.style.display = "block"; tip.style.left = ev.clientX + "px"; tip.style.top = ev.clientY + "px";
@@ -679,8 +867,9 @@ let down = null;
 canvas.addEventListener("pointerdown", ev => { down = { x: ev.clientX, y: ev.clientY, t: performance.now() }; stopTour(); });
 canvas.addEventListener("pointerup", ev => {
   if (!down || Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 6) return;
-  const h = pick(ev, [bMesh, terrain]); if (!h) return;
-  if (S.mode === "sun") { if (h.object === bMesh) sunHours(h); }
+  const h = pick(ev, S.mode === "traffic" ? [TR.mesh, bMesh, terrain] : [bMesh, terrain]); if (!h) return;
+  if (S.mode === "traffic") { if (h.object === TR.mesh) trInfo(TR.SEG[h.faceIndex]); }
+  else if (S.mode === "sun") { if (h.object === bMesh) sunHours(h); }
   else if (S.mode === "water") { if (h.object === bMesh) floodInfo(idOf(h)); }
   else if (S.mode === "view") viewshed(h);
 });
@@ -850,6 +1039,7 @@ const TOUR = [
   { t: "세종호수공원", cap: "호수공원 위로 해가 기웁니다. 해 질 녘엔 그림자가 수백 m까지 늘어납니다.", at: () => LP("세종호수공원"), d: 2800, az: 120, po: 66, date: "10-27", min: 17 * 60 + 25, mode: "sun" },
   { t: "이응다리", cap: "금강 위 둥근 보행교(이응다리). 둘레 1,446m는 훈민정음 반포 해를 뜻합니다. 수면을 6m 올려 봅니다.", at: () => LP("이응다리"), d: 3600, az: 10, po: 60, date: "07-15", min: 11 * 60, mode: "water", rise: 6 },
   { t: "원수산에서", cap: "원수산 꼭대기에서 보이는 도시. 밝게 남은 곳이 정상에서 직접 보이는 땅입니다.", at: () => LP("원수산"), d: 5600, az: 185, po: 50, date: "10-27", min: 14 * 60, mode: "view", eye: "peak" },
+  { t: "퇴근길", cap: "평일 저녁 6시. 일주일 동안 실제로 잰 구간 속도로 도로를 칠했습니다. 붉을수록 평소보다 느립니다.", at: () => V(-900, -500, 30), d: 6500, az: 20, po: 52, date: "10-28", min: 18 * 60, mode: "traffic" },
   { t: "밤의 나성동", cap: "해가 지면 9,284동의 창에 불이 켜집니다. 도로를 따라 가로등이 이어집니다.", at: () => V(-700, -1200, 40), d: 3800, az: 30, po: 62, date: "12-22", min: 19 * 60 + 10, mode: "sun" },
 ];
 let tour = { on: false, i: 0, timer: 0 };
@@ -871,7 +1061,7 @@ function stepFly(now) {
 }
 function tourStop(i) {
   const st = TOUR[i]; tour.i = i;
-  setMode(st.mode === "water" || st.mode === "view" ? st.mode : "tour", true);
+  setMode(["water", "view", "traffic"].includes(st.mode) ? st.mode : "tour", true);
   S.date = today.slice(0, 4) + "-" + st.date; $("#date").value = S.date; markDays();
   S.rise = st.rise || 0; $("#lv").value = S.rise; setLevel(S.rise); floodStats();
   const at = st.at();
@@ -905,6 +1095,8 @@ function setMode(m, fromTour) {
   document.querySelectorAll("#modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === show));
   document.querySelectorAll(".sec").forEach(s => s.classList.toggle("on", s.id === "s-" + show));
   U.uFlood.value = m === "water" ? 1 : 0;
+  TR.group.visible = m === "traffic";
+  TRS.last = -1;
   if (m !== "view") clearView();
   if (m !== "sun") { sunRay.visible = false; if (m !== "view") marker.visible = !!(lastSun && m === "sun"); }
   if (m === "sun" && lastSun) { marker.position.copy(lastSun.p).addScaledVector(lastSun.n, .4); marker.visible = true; U.uSel.value = lastSun.b; }
@@ -933,7 +1125,7 @@ addEventListener("keydown", e => {
   if (e.code === "Space") { e.preventDefault(); $("#play").click(); }
   if (e.key === "ArrowRight") { S.min = (S.min + 15) % 1440; applySun(); }
   if (e.key === "ArrowLeft") { S.min = (S.min + 1425) % 1440; applySun(); }
-  if (["1", "2", "3", "4"].includes(e.key)) document.querySelectorAll("#modes button")[+e.key - 1].click();
+  if (["1", "2", "3", "4", "5"].includes(e.key)) document.querySelectorAll("#modes button")[+e.key - 1].click();
 });
 const HOME = { at: V(-900, -500, 30), d: 9000, az: 12, po: 52 };
 $("#bHome").onclick = () => { stopTour(); flyTo(HOME.at, HOME.d, HOME.az, HOME.po, 2000); };
@@ -949,7 +1141,7 @@ function saveHash(now) {
   clearTimeout(hashT);
   const f = () => {
     const c = camera.position, t = controls.target, r = v => Math.round(v);
-    const h = `m=${S.mode}&d=${S.date}&t=${S.min}&r=${S.rise.toFixed(1)}&c=${[c.x, c.y, c.z, t.x, t.y, t.z].map(r).join(",")}`;
+    const h = `m=${S.mode}&d=${S.date}&t=${Math.round(S.min)}&r=${S.rise.toFixed(1)}&w=${TRS.wk}&c=${[c.x, c.y, c.z, t.x, t.y, t.z].map(r).join(",")}`;
     history.replaceState(null, "", "#" + h);
   };
   now ? f() : (hashT = setTimeout(f, 400));
@@ -959,6 +1151,7 @@ function loadHash() {
   if (q.get("d")) S.date = q.get("d");
   if (q.get("t")) S.min = +q.get("t");
   if (q.get("r")) S.rise = +q.get("r");
+  if (q.get("w") === "1") { TRS.wk = 1; document.querySelectorAll("#wkPre button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === "1")); }
   const c = (q.get("c") || "").split(",").map(Number);
   if (c.length === 6 && c.every(isFinite)) { camera.position.set(c[0], c[1], c[2]); controls.target.set(c[3], c[4], c[5]); return q.get("m") || "sun"; }
   controls.target.copy(HOME.at);
@@ -975,6 +1168,7 @@ function frame(now) {
   U.uTime.value = now / 1000;
   if (S.play) { S.min = (S.min + dt * 60 * 2.5 * 4) % 1440; S.min = Math.round(S.min * 10) / 10; applySun(); }
   stepFly(now);
+  trCars(dt);
   controls.update();
   fitShadow();
   doHover();
@@ -1009,7 +1203,7 @@ function frame(now) {
 
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); drawScrub();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); TR.lineMat.resolution.set(innerWidth, innerHeight); drawScrub();
 });
 controls.addEventListener("end", () => saveHash());
 
@@ -1023,7 +1217,7 @@ if (S.rise && m0 === "water") { $("#lv").value = S.rise; setLevel(S.rise); flood
 await step(100, "다 지었습니다");
 requestAnimationFrame(frame);
 setTimeout(() => $("#load").classList.add("done"), 250);
-window.__twin = { THREE, ray, floodStats, animateRise, S, camera, controls, scene, applySun, setMode, flyTo, V, M, B, startTour, viewshed, sunHours, terrain, bMesh };
+window.__twin = { TR, trUpdate, trInfo, THREE, ray, floodStats, animateRise, S, camera, controls, scene, applySun, setMode, flyTo, V, M, B, startTour, viewshed, sunHours, terrain, bMesh };
 </script>
 <script src="https://ysong86.github.io/nav.js" data-site="lab"></script>
 <script>

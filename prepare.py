@@ -10,6 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RAW = os.path.join(HERE, "data", "raw")
 OUT = os.path.join(HERE, "site")
 FOOT = os.path.join(HERE, "..", "sejong_vacant", "data", "footprints.json")
+FIRE = os.path.join(HERE, "..", "sejong_fire", "data")        # 화재안전 상황판이 모은 ITS 소통정보·표준노드링크
 
 LON0, LAT0 = 127.285, 36.503
 KX = math.cos(math.radians(LAT0)) * 111320.0
@@ -236,10 +237,64 @@ def main():
     put("road_k", np.array([k for _, k in roads], dtype="<u1"))
     lines("rail", rails)
 
+    # ── 교통: ITS 구간 속도(30분 표본) → 구간별 평일·주말 시간대(0~23시) 중앙값
+    import glob, statistics, datetime as dtm
+    net = json.load(open(os.path.join(FIRE, "network.json"), encoding="utf-8"))["links"]
+    net = [l for l in net if all(W0 <= q[0] <= E0 and S0 <= q[1] <= N0 for q in l["pts"])]
+    ids = {l["id"] for l in net}
+    obs = {}                                   # id → [[평일 0~23시 값들], [주말 …]]
+    hrs = [[0] * 24, [0] * 24]
+    days = set()
+    for fn in sorted(glob.glob(os.path.join(FIRE, "raw", "its", "*.json"))):
+        d = json.load(open(fn, encoding="utf-8"))
+        t = dtm.datetime.strptime(d["created"][:12], "%Y%m%d%H%M")
+        we = 1 if t.weekday() >= 5 else 0
+        hrs[we][t.hour] += 1
+        days.add(t.strftime("%Y-%m-%d"))
+        for lid, v in d["speeds"].items():
+            if lid in ids and v > 0:            # 0 은 '자료 없음'
+                obs.setdefault(lid, [[[] for _ in range(24)], [[] for _ in range(24)]])[we][t.hour].append(v)
+
+    def fill(arr):                             # 빈 시간은 앞뒤(원형) 값으로 잇는다
+        known = [h for h in range(24) if arr[h] is not None]
+        if not known:
+            return [0] * 24
+        out = []
+        for h in range(24):
+            if arr[h] is not None:
+                out.append(arr[h]); continue
+            pv = max((k for k in known if k < h), default=known[-1] - 24)
+            nx = min((k for k in known if k > h), default=known[0] + 24)
+            a1, a2 = arr[pv % 24], arr[nx % 24]
+            out.append(a1 + (a2 - a1) * (h - pv) / (nx - pv))
+        return out
+
+    tl, tn, tsp, tmeta, tnames = [], [], [], [], []
+    nm_ix = {}
+    for l in net:
+        if l["id"] not in obs:
+            continue
+        o = obs[l["id"]]
+        wd = fill([statistics.median(v) if v else None for v in o[0]])
+        we = fill([statistics.median(v) if v else None for v in o[1]])
+        if not any(o[1][h] for h in range(24)):
+            we = wd
+        tl.append([xy(*q) for q in l["pts"]])
+        tsp.append([min(255, round(v)) for v in wd + we])
+        nm = l.get("name") or ""
+        if nm not in nm_ix:
+            nm_ix[nm] = len(tnames); tnames.append(nm)
+        tmeta.append((int(l["rank"]) - 100, min(255, int(l.get("max") or 0)), nm_ix[nm]))
+    lines("traf", tl)
+    put("traf_sp", np.array(tsp, dtype="<u1").ravel())
+    put("traf_m", np.array(tmeta, dtype="<u2").ravel())
+    traffic = {"names": tnames, "hours": hrs, "from": min(days), "to": max(days), "snaps": sum(hrs[0]) + sum(hrs[1])}
+    print("교통 구간", len(tl), "표본", traffic["snaps"], traffic["from"], "~", traffic["to"])
+
     blob = b"".join(blobs)
     open(os.path.join(OUT, "twin.bin"), "wb").write(blob)
     meta_j = {"center": [LON0, LAT0], "k": [KX, KY], "dem": dem, "river": round(float(river), 2), "slope": round(float(slope), 7),
-              "n": nb, "offs": offs, "names": names, "labels": labels,
+              "n": nb, "offs": offs, "traffic": traffic, "names": names, "labels": labels,
               "zones": ["1생활권", "2생활권", "3생활권", "4생활권", "5생활권", "6생활권", "S생활권", "-"]}
     json.dump(meta_j, open(os.path.join(OUT, "twin.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print("twin.bin", round(len(blob) / 1e6, 2), "MB, twin.json", round(os.path.getsize(os.path.join(OUT, "twin.json")) / 1e3), "KB")
