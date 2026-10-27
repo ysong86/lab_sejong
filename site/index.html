@@ -90,7 +90,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .tour li.on{color:var(--accent);font-weight:600}
 .cap{font-size:14px;line-height:1.7;margin:10px 0 0;min-height:72px}
 #credit{border-top:1px solid var(--line);padding:12px 18px 14px;font-size:11px;line-height:1.65;color:var(--ink3)}
-#credit i{display:block;margin-top:6px}
+#credit .hits{display:flex;align-items:center;gap:8px;margin-top:8px}#credit .hits img{display:block}
 #credit a{color:inherit}
 
 /* 아래 시간 막대 */
@@ -223,8 +223,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   </div>
   <div id="credit" class="credit">
     건물: 브이월드 GIS건물통합정보 · 지형: AWS Terrain Tiles · 지도: © OpenStreetMap 기여자 · 태양: 천문 계산식(NOAA 근사)<br>
-    제작: 세종연구원 연구모임 / 김성표, 안용준, 김흥주, 남영식, 이재민, 이자은, 송양호 / 대표 문의: 송양호(ysong@sri.re.kr)
-    <i>연구원의 공식 업무가 아닌, 참여 연구자들의 호기심과 재미에서 시작한 작업입니다. 결과물은 참고용으로 봐 주세요.</i>
+    제작: 세종연구원 송양호 책임연구위원 · 문의: <a href="mailto:ysong@sri.re.kr">ysong@sri.re.kr</a>
+    <div class="hits"><img alt="조회수 오늘/전체" height="20" decoding="async" src="https://hits.sh/ysong86.github.io/lab_sejong.svg?view=today-total&amp;style=flat-square&amp;label=%EC%A1%B0%ED%9A%8C%EC%88%98&amp;color=152484&amp;labelColor=64748b" onerror="this.parentNode.style.display='none'"><span>오늘 / 전체</span></div>
   </div>
 </aside>
 
