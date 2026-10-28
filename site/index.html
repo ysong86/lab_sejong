@@ -787,8 +787,9 @@ function applySun() {
   sky.material.uniforms.rayleigh.value = 1.0 + 1.8 * low;
   renderer.toneMappingExposure = 0.62 + 0.35 * S.night;
   const trf = S.mode === "traffic";               // 교통 모드: 도로 색이 묻히지 않게 창 불빛·빛번짐을 줄인다
-  U.uNight.value = S.night * (trf ? 0.35 : 1);
-  bloom.strength = (trf ? 0.22 : 0.7) * S.night;
+  const walk = document.body.classList.contains("walking");   // 걸어 보기: 창이 코앞이라 빛번짐이 화면을 덮는다
+  U.uNight.value = S.night * (trf ? 0.35 : walk ? 0.55 : 1);
+  bloom.strength = (trf ? 0.22 : walk ? 0.18 : 0.7) * S.night;
   lamps.material.opacity = S.night;
   const fogC = new THREE.Color().setHSL(0.58, 0.2 * day, 0.08 + 0.78 * day);
   if (low > 0.4 && day > 0.5) fogC.lerp(new THREE.Color(0xf0d0b0), (low - 0.4) * 0.5);
@@ -1172,7 +1173,7 @@ const walkPos = new THREE.Vector3();
 function setWalk(on) {
   if (on === WALK.on) return;
   stopTour(); fly = null; WALK.on = on;
-  document.body.classList.toggle("walking", on);
+  document.body.classList.toggle("walking", on); applySun();
   $("#bWalk").setAttribute("aria-pressed", on); $("#walkTip").classList.toggle("on", on); $("#walkPad").classList.toggle("on", on && MOBILE);
   if (on) {
     const t = controls.target, d = new THREE.Vector3().subVectors(t, camera.position); d.y = 0; d.normalize();
@@ -1208,6 +1209,7 @@ function stepMove(dt) {
   if (WALK.on) {
     const run = k("ShiftLeft") || k("ShiftRight") ? 5 : 1, v = 7 * run * dt;            // 걷기 약 시속 25km(화면용으로 빠르게), Shift 5배
     const f = new THREE.Vector3(Math.sin(WALK.yaw), 0, -Math.cos(WALK.yaw)), r = new THREE.Vector3(-f.z, 0, f.x);
+    if (KEYS.size && tip.style.display !== "none") { tip.style.display = "none"; U.uHov.value = -1; }   // 걷는 동안 예전 이름표가 남지 않게
     if (k("KeyW") || k("ArrowUp")) walkPos.addScaledVector(f, v);
     if (k("KeyS") || k("ArrowDown")) walkPos.addScaledVector(f, -v);
     if (k("KeyD")) walkPos.addScaledVector(r, v);
@@ -1300,6 +1302,7 @@ function frame(now) {
     }
     rain.geometry.attributes.position.needsUpdate = true;
   }
+  if (marker.visible) marker.scale.setScalar(THREE.MathUtils.clamp(camera.position.distanceTo(marker.position) / 260, 0.25, 40));   // 표시점은 화면에서 늘 비슷한 크기로
   if (ring.visible) { const k = ((now - ring.userData.t0) / 2400) % 1; ring.scale.setScalar(20 + k * 600); ring.material.opacity = .8 * (1 - k); }
   if (marker.visible && S.mode === "sun" && lastSun && S.alt > 0) {       // 측정점에서 해 쪽으로 점선
     const a = marker.position, b = a.clone().addScaledVector(S.dir, 400);
@@ -1326,7 +1329,7 @@ if (S.rise && m0 === "water") { $("#lv").value = S.rise; setLevel(S.rise); flood
 await step(100, "다 지었습니다");
 requestAnimationFrame(frame);
 setTimeout(() => $("#load").classList.add("done"), 250);
-window.__twin = { WALK, setWalk, KEYS, TR, trUpdate, trInfo, THREE, ray, floodStats, animateRise, S, camera, controls, scene, applySun, setMode, flyTo, V, M, B, startTour, viewshed, sunHours, terrain, bMesh };
+window.__twin = { walkPos, WALK, setWalk, KEYS, TR, trUpdate, trInfo, THREE, ray, floodStats, animateRise, S, camera, controls, scene, applySun, setMode, flyTo, V, M, B, startTour, viewshed, sunHours, terrain, bMesh };
 </script>
 <script src="https://ysong86.github.io/nav.js" data-site="lab"></script>
 <script>

@@ -48,7 +48,8 @@ OVERLAY = r"""
         font-family:"IBM Plex Sans KR",sans-serif;text-align:center}
   #vcap .n{display:block;font:500 11px/1 "IBM Plex Mono","IBM Plex Sans KR",monospace;letter-spacing:.16em;color:#8EA0F2;margin-bottom:7px}
   #vcap b{display:block;font-weight:600;font-size:23px;letter-spacing:-.01em;line-height:1.25}
-  #vcap small{display:block;font-size:14.5px;opacity:.78;margin-top:4px}`;
+  #vcap small{display:block;font-size:14.5px;opacity:.78;margin-top:4px}
+  #toast{display:none!important}`;
   document.head.appendChild(css);
   const c = document.createElement('div'); c.id = 'vcur';
   c.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 2l15 9.5-6.6 1.6 3.9 7.4-3.1 1.6-3.9-7.5L4 19.5z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>';
@@ -129,7 +130,7 @@ def main():
 
         # ── 0~5초: 도시로 날아 들어간다(페이지가 처음에 하는 비행)
         cap("SEJONG DIGITAL TWIN · LAB", "세종 디지털트윈 실험실", "행복도시 9,284동과 실제 지형을 한 모형 위에")
-        frame(150)
+        frame(126)
 
         # ── 5~13초: 시각을 끌면 실제 해가 그림자를 옮긴다
         gov = js("__twin.M.labels.find(l => l.n === '정부세종청사')")
@@ -141,7 +142,7 @@ def main():
         pg.mouse.down()
         frame(3)
         x2, _ = scrub_x(16 * 60 + 30)
-        move(x2, y, 120)
+        move(x2, y, 100)
         pg.mouse.up()
         frame(12)
 
@@ -159,9 +160,9 @@ def main():
         sx, sy = screen(wall)
         move(sx, sy, 34)
         click(10)
-        frame(40)
-        move(*box("#sunOut .verdict"), 30)
-        frame(42)
+        frame(30)
+        move(*box("#sunOut .verdict"), 26)
+        frame(30)
 
         # ── 20~28초: 금강 수면을 올리면
         move(*box('#modes [data-m="water"]'), 26)
@@ -171,9 +172,9 @@ def main():
         frame(20)
         move(*box('#lvPre [data-v="9"]'), 30)
         click(4)
-        frame(80)
-        move(*box("#wZ"), 30)
-        frame(48)
+        frame(64)
+        move(*box("#wZ"), 26)
+        frame(34)
 
         # ── 28~34초: 산 위에서 보이는 곳
         move(*box('#modes [data-m="view"]'), 24)
@@ -185,7 +186,7 @@ def main():
         sx, sy = screen([won["x"], won["y"], won["z"] + 1])
         move(sx, sy, 30)
         click(4)
-        frame(60)
+        frame(46)
 
         # ── 34~44초: 출퇴근 정체(ITS 구간 속도)
         move(*box('#modes [data-m="traffic"]'), 24)
@@ -196,11 +197,11 @@ def main():
         frame(10)
         move(*box('#hrPre [data-v="480"]'), 26)
         click(4)
-        frame(56)
+        frame(44)
         move(*box('#hrPre [data-v="1080"]'), 22)
         click(4)
         cap("04 · 출퇴근 정체", "퇴근 18시, 붉을수록 평소보다 느립니다", "정체·서행 구간 길이 · 시간대별 평균 속도 · 가장 막히는 길")
-        frame(52)
+        frame(42)
         js("() => { const b = document.querySelector('#body'), li = document.querySelector('#trTop'); b.scrollTo({top: li.offsetTop - 120, behavior: 'smooth'}); }")
         frame(18)
         move(*box("#trTop li"), 22)
@@ -224,9 +225,33 @@ def main():
         move(x2, y, 64)
         pg.mouse.up()
         move(W * 0.36, H * 0.42, 20)
-        frame(24)
-        cap("ysong86.github.io/#/lab", "직접 만져 보세요", "세종연구원 송양호 · 세종 이슈 대시보드")
-        frame(54)
+        frame(16)
+
+        # ── 걸어 보기: 내려다보던 자리에서 사람 눈높이로 내려와 밤거리를 걷는다
+        move(*box("#bWalk"), 22)
+        click(2)
+        # 큰길 위, 길 방향으로 — 곧장 걸어도 벽을 뚫지 않게
+        js("""() => { const T = __twin, R = T.TR; let best = -1, bd = 1e9;
+            // 앞쪽 250m 양옆 120m 안 고층(30m 넘는) 건물이 가장 많은 큰길
+            for (let k = 0; k < R.L; k++) { if (R.TM[k * 3] > 4 || R.LEN[k] < 350) continue;
+              const i = R.L0[k] + 2, j = i + 3; if (j >= R.L0[k] + R.LN[k]) continue;
+              const ex = R.dx[j] - R.dx[i], ey = R.dy[j] - R.dy[i], el = Math.hypot(ex, ey) || 1, ux = ex / el, uy = ey / el;
+              let sc = 0;
+              for (let b = 0; b < T.M.n; b++) { if (T.B.h[b] < 30) continue; const px = T.B.cx[b] - R.dx[i], py = T.B.cy[b] - R.dy[i];
+                const along = px * ux + py * uy, side = Math.abs(-px * uy + py * ux); if (along > 20 && along < 250 && side < 120) sc++; }
+              if (-sc < bd) { bd = -sc; best = k; } }
+            const i = R.L0[best] + 2, j = i + 3, ex = R.dx[j] - R.dx[i], ey = R.dy[j] - R.dy[i];   // 교차로 모서리를 피해 조금 들어간 곳, 그 자리 길 방향
+            T.walkPos.set(R.dx[i] - ey / Math.hypot(ex, ey) * 4, 0, -(R.dy[i] + ex / Math.hypot(ex, ey) * 4));
+            T.WALK.yaw = Math.atan2(ex, ey); T.WALK.pitch = 0.12; T.KEYS.add('KeyW'); T.KEYS.add('ShiftLeft'); }""")
+        cap("🚶 걸어 보기", "사람 눈높이로 내려와 거리를 걷습니다", "끌어서 둘러보고 W A S D 로 걷기 · 어디서든 벽을 눌러 일조시간")
+        move(W * 0.12, H * 0.24, 20)          # 하늘 쪽으로 비켜 이름표가 안 뜨게
+        for i in range(120):
+            js("() => { __twin.WALK.yaw += 0.0008; }")
+            frame()
+        cap("ysong86.github.io/#/lab", "직접 움직여 보세요", "세종연구원 송양호 · 세종 이슈 대시보드")
+        for i in range(60):
+            js("() => { __twin.WALK.yaw += 0.0008; __twin.WALK.lift += 0.6; }")
+            frame()
         b.close()
 
     ff = imageio_ffmpeg.get_ffmpeg_exe()
