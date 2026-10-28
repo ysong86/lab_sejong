@@ -112,7 +112,19 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 /* 도구 단추 */
 #tools{position:fixed;right:404px;top:calc(16px + var(--navh,0px));display:flex;gap:6px}
 #tools button{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);width:36px;height:36px;display:grid;place-items:center;font-size:15px}
-#toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none}
+#keys{position:fixed;left:16px;bottom:94px;display:flex;flex-wrap:wrap;gap:4px 12px;font:11.5px/1.4 var(--sans);color:var(--ink2);
+  max-width:calc(100vw - 420px);pointer-events:none;text-shadow:0 0 6px var(--paper),0 0 2px var(--paper)}
+#keys b{font:500 10.5px var(--mono);border:1px solid var(--line);background:var(--glass);padding:1px 5px;margin-right:4px;color:var(--ink);text-shadow:none}
+#tools button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+#walkPad{position:fixed;left:50%;bottom:96px;transform:translateX(calc(-50% - 194px));display:none;grid-template-columns:repeat(3,44px);gap:4px}
+#walkPad.on{display:grid}
+#walkPad button{height:44px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:16px}
+#walkPad .sp{visibility:hidden}
+#walkTip{position:fixed;left:50%;top:calc(64px + var(--navh,0px));transform:translateX(calc(-50% - 194px));background:var(--ink);color:var(--paper);
+  font-size:12.5px;padding:7px 12px;display:none;white-space:nowrap}
+#walkTip.on{display:block}
+body.walking #head,body.walking #keys{display:none}
+#toast{position:fixed;left:50%;bottom:128px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none}
 #toast.on{opacity:1}
 
 /* 라벨·말풍선 */
@@ -145,6 +157,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   #read{min-width:0}#read .t{font-size:18px}
   #tools{right:16px;top:auto;bottom:calc(44vh + 120px);flex-direction:column}
   #toast{bottom:calc(44vh + 130px)}
+  #keys{display:none}
+  #walkPad{bottom:calc(44vh + 120px);transform:translateX(-50%)}
+  #walkTip{transform:translateX(-50%);white-space:normal;max-width:80vw}
 }
 </style>
 <script type="importmap">
@@ -169,6 +184,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="tools">
   <button id="bShot" title="지금 화면 사진으로 저장" aria-label="사진 저장">⤓</button>
   <button id="bLink" title="지금 보는 장면을 링크로 복사" aria-label="링크 복사">🔗</button>
+  <button id="bWalk" title="사람 눈높이로 걸어 보기 (G)" aria-label="걸어 보기" aria-pressed="false">🚶</button>
   <button id="bHome" title="처음 시점으로" aria-label="처음 시점">⌂</button>
 </div>
 
@@ -261,12 +277,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   <div id="read"><div class="t" id="rT">12:00</div><div class="s" id="rS">고도 — · 방위 —</div></div>
 </div>
 <div id="toast"></div>
+<div id="keys"><span><b>끌기</b>이동</span><span><b>오른쪽 끌기</b>돌리기·기울이기</span><span><b>휠</b>가까이</span><span><b>두 번 누르기</b>그곳으로</span><span><b>WASD</b>미끄러지기</span><span><b>Q E</b>돌기</span><span><b>G</b>걸어 보기</span></div>
+<div id="walkTip">🚶 걸어 보기 · 끌어서 둘러보기 · W A S D(↑↓) 걷기 · Shift 달리기 · R F 오르내리기 · Esc 나가기</div>
+<div id="walkPad" aria-label="걷기 방향"><span class="sp"></span><button data-k="KeyW" aria-label="앞으로">▲</button><span class="sp"></span>
+  <button data-k="KeyA" aria-label="왼쪽">◀</button><button data-k="KeyS" aria-label="뒤로">▼</button><button data-k="KeyD" aria-label="오른쪽">▶</button></div>
 
 <div id="load"><div class="in"><div class="k">SEJONG DIGITAL TWIN</div><h2>모형을 짓는 중</h2><div class="bar"><i id="lb"></i></div><div class="st" id="ls">자료를 받는 중…</div></div></div>
 
 <script type="module">
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { MapControls } from "three/addons/controls/MapControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -316,11 +336,13 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.62;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 4, 90000);
-const controls = new OrbitControls(camera, canvas);
+const controls = new MapControls(camera, canvas);   // 지도처럼: 끌면 이동, 오른쪽(두 손가락)으로 돌리기
 controls.enableDamping = true; controls.dampingFactor = 0.08;
 controls.maxPolarAngle = 86 * RAD; controls.minDistance = 40; controls.maxDistance = 26000;
 controls.screenSpacePanning = false;
 controls.zoomToCursor = true;
+controls.panSpeed = 1.1; controls.rotateSpeed = 0.7;
+canvas.addEventListener("contextmenu", e => e.preventDefault());
 
 const sky = new Sky(); sky.scale.setScalar(80000); scene.add(sky);
 Object.assign(sky.material.uniforms.turbidity, { value: 5 });
@@ -865,6 +887,13 @@ function doHover() {
 }
 let down = null;
 canvas.addEventListener("pointerdown", ev => { down = { x: ev.clientX, y: ev.clientY, t: performance.now() }; stopTour(); });
+canvas.addEventListener("dblclick", ev => {
+  if (WALK.on) return;
+  const h = pick(ev, [bMesh, terrain]); if (!h) return;
+  const off = camera.position.clone().sub(controls.target), sp = new THREE.Spherical().setFromVector3(off);
+  const at = h.point.clone();
+  flyTo(at, Math.max(160, sp.radius * 0.45), sp.theta / RAD, Math.min(sp.phi / RAD, 62), 1300);
+});
 canvas.addEventListener("pointerup", ev => {
   if (!down || Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 6) return;
   const h = pick(ev, S.mode === "traffic" ? [TR.mesh, bMesh, terrain] : [bMesh, terrain]); if (!h) return;
@@ -1045,6 +1074,8 @@ const TOUR = [
 let tour = { on: false, i: 0, timer: 0 };
 let fly = null;
 function flyTo(at, d, azD, poD, ms = 3200) {
+  if (WALK.on) { WALK.on = false; controls.enabled = true; camera.near = 4; camera.updateProjectionMatrix();
+    document.body.classList.remove("walking"); $("#bWalk").setAttribute("aria-pressed", false); $("#walkTip").classList.remove("on"); $("#walkPad").classList.remove("on"); }
   const t0 = controls.target.clone(), off = camera.position.clone().sub(t0), s0 = new THREE.Spherical().setFromVector3(off);
   const s1 = new THREE.Spherical(d, poD * RAD, azD * RAD);
   let dth = s1.theta - s0.theta; dth = ((dth + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
@@ -1120,15 +1151,92 @@ $("#date").onchange = e => { if (e.target.value) { S.date = e.target.value; mark
 function markDays() { document.querySelectorAll("#days button").forEach(b => b.setAttribute("aria-pressed", b.dataset.d === "today" ? S.date === today : S.date.slice(5) === b.dataset.d)); }
 $("#days").onclick = e => { const b = e.target.closest("button"); if (!b) return; S.date = b.dataset.d === "today" ? today : today.slice(0, 4) + "-" + b.dataset.d; $("#date").value = S.date; markDays(); applySun(); if (lastSun) sunHours(lastSun.h, S.date); };
 $("#play").onclick = () => { S.play = !S.play; $("#play").textContent = S.play ? "❚❚" : "▶"; };
+const KEYS = new Set();
+addEventListener("keyup", e => KEYS.delete(e.code));
+addEventListener("blur", () => KEYS.clear());
 addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
+  if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "KeyR", "KeyF", "ShiftLeft", "ShiftRight"].includes(e.code) || (WALK.on && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code))) {
+    KEYS.add(e.code); stopTour(); fly = null; if (e.code.startsWith("Arrow")) { e.preventDefault(); return; }
+  }
+  if (e.code === "KeyG") { setWalk(!WALK.on); return; }
+  if (e.code === "Escape" && WALK.on) { setWalk(false); return; }
   if (e.code === "Space") { e.preventDefault(); $("#play").click(); }
   if (e.key === "ArrowRight") { S.min = (S.min + 15) % 1440; applySun(); }
   if (e.key === "ArrowLeft") { S.min = (S.min + 1425) % 1440; applySun(); }
   if (["1", "2", "3", "4", "5"].includes(e.key)) document.querySelectorAll("#modes button")[+e.key - 1].click();
 });
+// ───────── 움직이기: 지도 위 미끄러지기(WASD·QE) / 사람 눈높이로 걸어 보기
+const WALK = { on: false, yaw: 0, pitch: -0.05, eye: 1.7, lift: 0, look: null };
+const walkPos = new THREE.Vector3();
+function setWalk(on) {
+  if (on === WALK.on) return;
+  stopTour(); fly = null; WALK.on = on;
+  document.body.classList.toggle("walking", on);
+  $("#bWalk").setAttribute("aria-pressed", on); $("#walkTip").classList.toggle("on", on); $("#walkPad").classList.toggle("on", on && MOBILE);
+  if (on) {
+    const t = controls.target, d = new THREE.Vector3().subVectors(t, camera.position); d.y = 0; d.normalize();
+    WALK.yaw = Math.atan2(d.x, -d.z); WALK.pitch = -0.04; WALK.lift = 0;
+    walkPos.set(t.x, 0, t.z);
+    controls.enabled = false;
+    camera.near = 1; camera.updateProjectionMatrix();
+    toast("사람 눈높이로 내려왔습니다 — 끌어서 둘러보고 WASD 로 걸어 보세요");
+  } else {
+    const f = new THREE.Vector3(Math.sin(WALK.yaw), 0, -Math.cos(WALK.yaw));
+    const t = walkPos.clone().addScaledVector(f, 120); t.y = hAt(t.x, -t.z) + 5;
+    controls.target.copy(t); controls.enabled = true;
+    camera.near = 4; camera.updateProjectionMatrix();
+    flyTo(t, 900, Math.atan2(-f.x, -f.z) / RAD, 58, 1400);
+  }
+}
+$("#bWalk").onclick = () => setWalk(!WALK.on);
+canvas.addEventListener("pointerdown", ev => { if (WALK.on) WALK.look = { x: ev.clientX, y: ev.clientY }; });
+addEventListener("pointerup", () => { WALK.look = null; });
+canvas.addEventListener("pointermove", ev => {
+  if (!WALK.on || !WALK.look || !ev.buttons) return;
+  WALK.yaw += (ev.clientX - WALK.look.x) * 0.0045; WALK.pitch = THREE.MathUtils.clamp(WALK.pitch - (ev.clientY - WALK.look.y) * 0.0045, -1.2, 1.2);
+  WALK.look = { x: ev.clientX, y: ev.clientY };
+});
+canvas.addEventListener("wheel", ev => { if (!WALK.on) return; ev.preventDefault(); WALK.lift = THREE.MathUtils.clamp(WALK.lift - ev.deltaY * 0.05, 0, 300); }, { passive: false });
+document.querySelectorAll("#walkPad button").forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener("pointerdown", e => { e.preventDefault(); KEYS.add(k); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(t => b.addEventListener(t, () => KEYS.delete(k)));
+});
+function stepMove(dt) {
+  const k = c => KEYS.has(c);
+  if (WALK.on) {
+    const run = k("ShiftLeft") || k("ShiftRight") ? 5 : 1, v = 7 * run * dt;            // 걷기 약 시속 25km(화면용으로 빠르게), Shift 5배
+    const f = new THREE.Vector3(Math.sin(WALK.yaw), 0, -Math.cos(WALK.yaw)), r = new THREE.Vector3(-f.z, 0, f.x);
+    if (k("KeyW") || k("ArrowUp")) walkPos.addScaledVector(f, v);
+    if (k("KeyS") || k("ArrowDown")) walkPos.addScaledVector(f, -v);
+    if (k("KeyD")) walkPos.addScaledVector(r, v);
+    if (k("KeyA")) walkPos.addScaledVector(r, -v);
+    if (k("ArrowLeft") || k("KeyQ")) WALK.yaw -= 1.6 * dt;
+    if (k("ArrowRight") || k("KeyE")) WALK.yaw += 1.6 * dt;
+    if (k("KeyR")) WALK.lift = Math.min(300, WALK.lift + 30 * dt);
+    if (k("KeyF")) WALK.lift = Math.max(0, WALK.lift - 30 * dt);
+    walkPos.x = THREE.MathUtils.clamp(walkPos.x, D.x0 + 50, D.x0 + DW - 50);
+    walkPos.z = THREE.MathUtils.clamp(walkPos.z, -D.y1 + 50, -D.y1 + DH - 50);
+    const gy = hAt(walkPos.x, -walkPos.z) + WALK.eye + WALK.lift;
+    camera.position.set(walkPos.x, gy, walkPos.z);
+    const look = new THREE.Vector3(Math.sin(WALK.yaw) * Math.cos(WALK.pitch), Math.sin(WALK.pitch), -Math.cos(WALK.yaw) * Math.cos(WALK.pitch));
+    camera.lookAt(camera.position.clone().add(look));
+    controls.target.copy(camera.position).addScaledVector(look, 60);               // 그림자 상자·라벨은 앞쪽 60m 를 기준으로
+    return;
+  }
+  if (!KEYS.size) return;                                                            // 지도 위 미끄러지기
+  const t = controls.target, off = camera.position.clone().sub(t), dist = off.length();
+  const f = new THREE.Vector3(-off.x, 0, -off.z).normalize(), r = new THREE.Vector3(-f.z, 0, f.x), m = new THREE.Vector3();
+  if (k("KeyW")) m.add(f); if (k("KeyS")) m.sub(f); if (k("KeyD")) m.add(r); if (k("KeyA")) m.sub(r);
+  if (m.lengthSq()) { m.normalize().multiplyScalar(dist * 0.6 * dt * (k("ShiftLeft") || k("ShiftRight") ? 3 : 1)); t.add(m); camera.position.add(m); }
+  const rot = (k("KeyE") ? 1 : 0) - (k("KeyQ") ? 1 : 0);
+  if (rot) { off.applyAxisAngle(new THREE.Vector3(0, 1, 0), rot * 1.2 * dt); camera.position.copy(t).add(off); }
+  if (k("KeyR") || k("KeyF")) { off.multiplyScalar(1 + ((k("KeyF") ? 1 : 0) - (k("KeyR") ? 1 : 0)) * 1.2 * dt); if (off.length() > 40 && off.length() < 26000) camera.position.copy(t).add(off); }
+}
+
 const HOME = { at: V(-900, -500, 30), d: 9000, az: 12, po: 52 };
-$("#bHome").onclick = () => { stopTour(); flyTo(HOME.at, HOME.d, HOME.az, HOME.po, 2000); };
+$("#bHome").onclick = () => { setWalk(false); stopTour(); flyTo(HOME.at, HOME.d, HOME.az, HOME.po, 2000); };
 const toast = t => { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 1800); };
 $("#bLink").onclick = async () => { saveHash(true); try { await navigator.clipboard.writeText(location.href); toast("지금 장면 링크를 복사했습니다"); } catch { toast("주소창의 링크를 복사하세요"); } };
 $("#bShot").onclick = () => {
@@ -1169,7 +1277,8 @@ function frame(now) {
   if (S.play) { S.min = (S.min + dt * 60 * 2.5 * 4) % 1440; S.min = Math.round(S.min * 10) / 10; applySun(); }
   stepFly(now);
   trCars(dt);
-  controls.update();
+  stepMove(dt);
+  if (!WALK.on) controls.update();
   fitShadow();
   doHover();
   if (envDirty && now - lastEnv > 350) {        // 하늘 반사(물·유리)를 해 따라 다시 굽기
@@ -1217,7 +1326,7 @@ if (S.rise && m0 === "water") { $("#lv").value = S.rise; setLevel(S.rise); flood
 await step(100, "다 지었습니다");
 requestAnimationFrame(frame);
 setTimeout(() => $("#load").classList.add("done"), 250);
-window.__twin = { TR, trUpdate, trInfo, THREE, ray, floodStats, animateRise, S, camera, controls, scene, applySun, setMode, flyTo, V, M, B, startTour, viewshed, sunHours, terrain, bMesh };
+window.__twin = { WALK, setWalk, KEYS, TR, trUpdate, trInfo, THREE, ray, floodStats, animateRise, S, camera, controls, scene, applySun, setMode, flyTo, V, M, B, startTour, viewshed, sunHours, terrain, bMesh };
 </script>
 <script src="https://ysong86.github.io/nav.js" data-site="lab"></script>
 <script>
